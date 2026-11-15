@@ -126,13 +126,49 @@ AI 占比 vs 人工占比：70：30
 
 ---
 
-## 三、需要提交的代码位置
+## 三、任务清单与当前进度
 
-| 任务项 | notebook | TODO |
+打卡粒度可选三档，**优先保住最小打卡**：
+
+> (1) 仅 4.1　(2) 4.1 + 4.2　(3) 4.1 + 4.2 + 4.3
+
+| 任务项 | 交付物 | 对应 notebook | 状态 |
+|---|---|---|---|
+| **4.1 (1)** | 文字回答：因果掩码作用 + 不加会怎样 | 阅读 `topic_discussion/llm_architecture_evolution/01_transformer_decoder.md` | ⬜ 待写 |
+| **4.1 (2)** | 文字回答：LLaMA3 Block 完整组件顺序 | 同上 + `05_LLaMA3_Block_Tutorial.ipynb` Step 2 | ⬜ 待写 |
+| **4.1 (3)** | **补全代码 + 运行截图** | `02_PyTorch_Algorithms/05_LLaMA3_Block_Tutorial.ipynb` | ✅ **已完成** |
+| **4.2** | 文字回答：验证 loss 偏小的原因 + 定位检查 | `00_Prerequisites/12_PyTorch_Minimal_Training_Interface.ipynb` | ⬜ 待写 |
+| **4.3 (1)** | 文字回答：A/B/C 三变体对比 | `02_PyTorch_Algorithms/60_Decoder_Block_Stability_Benchmark.ipynb` | ⬜ 待写 |
+| **4.3 (2)** | **补全代码 + 运行截图** | `02_PyTorch_Algorithms/60_Decoder_Block_Stability_Benchmark.ipynb` | ⬜ **未做** |
+
+### 已完成部分的验证记录
+
+`05_LLaMA3_Block_Tutorial.ipynb`（已 commit `c07bed7`，已 push 到 `feature/task0-decoder-block`）：
+
+```
+[cell 9] ✅ Decoder Block：残差顺序、梯度连通与层堆叠测试通过
+[cell 15] ✅ Loss 下降: 3.182898 → 2.430521
+          ✅ 最小数据逻辑与训练循环通过
+```
+
+### 4.3 剩余工作（若要冲第 3 档）
+
+`60_Decoder_Block_Stability_Benchmark.ipynb` 有 4 个 TODO，全部集中在 cell 7：
+
+| TODO | 函数 | 要做什么 |
 |---|---|---|
-| 4.1 (3) | `02_PyTorch_Algorithms/05_LLaMA3_Block_Tutorial.ipynb` | TODO 1 / 2 / 3 |
-| 4.2 | `00_Prerequisites/12_PyTorch_Minimal_Training_Interface.ipynb` | 定位验证 loss 异常 |
-| 4.3 (2) | `02_PyTorch_Algorithms/60_Decoder_Block_Stability_Benchmark.ipynb` | TODO 1 / 2 / 3 / 4 |
+| 1 | `validate_block_spec` | 校验 `norm_position ∈ {pre_norm, post_norm}`、`norm_kind ∈ {rmsnorm, layernorm}`、`activation ∈ {swiglu, gelu}`；`d_ff` 必须是 `d_model` 的整数倍（SwiGLU 要等宽），否则 `ready=False` |
+| 2 | `validate_single_block_change` | 比较 baseline/candidate 的 `norm_position`/`norm_kind`/`activation`，**恰好一个字段不同**且等于 `declared_field` 才 `ready=True`；返回 `changed_fields` 列表 |
+| 3 | `run_block_stability_probe` | 堆 `depth` 层 `_ToyDecoderBlock`，用固定 seed 造输入，前向+反传，记录 `input_grad_norm`、`activation_std`、`finite`、`param_count` |
+| 4 | `decide_block_candidate` | `finite=False` → `reject`；仅 CPU 探针证据 → `tune`；匹配 checkpoint 的真实证据 → `accept` |
+
+测试断言（cell 8）已写好，跑通即输出：
+`测试通过：Block 契约、单变量比较、稳定性探针与决策口径一致。`
+
+> ⚠️ 注意 `_ToyDecoderBlock` 里 `activation` 只实现了 `swiglu` 和 `gelu` 两条分支。
+> issue 说的 "ReLU FFN" 对应代码里的 `gelu` 分支（`_ffn` 的 else 分支用 `F.gelu`）。
+> 写对比分析时要说清这个映射，别直接写 ReLU 代码对不上。
+
 
 ---
 
@@ -180,11 +216,21 @@ git push -u origin feature/task0-decoder-block
 
 ## 六、checklist
 
-- [ ] notebook 里 TODO 1–3 已补全
+### 最小打卡（4.1）—— 最小可交付
+
+- [ ] `05_LLaMA3_Block_Tutorial.ipynb` TODO 1–3 已补全
 - [ ] 测试输出 `✅ Decoder Block：残差顺序、梯度连通与层堆叠测试通过`
 - [ ] notebook 已保存到磁盘（Cmd+S）
 - [ ] 改动已 commit + push 到 fork
 - [ ] 截图已上传到 issue #284（作为附件）
-- [ ] issue 评论正文已填（按第二节模板）
+- [ ] issue 评论正文已填（按第二节模板，含 4.1(1)(2)(3) 三问）
 - [ ] 微信群截图含三要素：issue 标题 / GitHub ID / 微信群昵称
 - [ ] 微信群截图已发出
+
+### 增项（4.2 / 4.3）
+
+- [ ] 4.2 答案写进评论正文
+- [ ] 4.3(1) 三变体对比表写进评论正文
+- [ ] `60_Decoder_Block_Stability_Benchmark.ipynb` TODO 1–4 已补全
+- [ ] 测试输出 `测试通过：Block 契约、单变量比较、稳定性探针与决策口径一致。`
+- [ ] 4.3 截图已上传
